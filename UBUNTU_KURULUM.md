@@ -26,7 +26,7 @@ su - arda
 
 ### 3. Kurulum Scriptini İndirin ve Çalıştırın
 \`\`\`bash
-wget https://raw.githubusercontent.com/your-repo/arda-yumlu-portfolio/main/install-ubuntu.sh
+wget https://raw.githubusercontent.com/graphigen/portfolio/main/install-ubuntu.sh
 chmod +x install-ubuntu.sh
 ./install-ubuntu.sh
 \`\`\`
@@ -62,7 +62,7 @@ sudo npm install -g pm2
 sudo mkdir -p /var/www
 sudo chown -R $USER:$USER /var/www
 cd /var/www
-git clone https://github.com/your-repo/arda-yumlu-portfolio.git
+git clone https://github.com/graphigen/portfolio.git arda-yumlu-portfolio
 cd arda-yumlu-portfolio
 \`\`\`
 
@@ -97,13 +97,13 @@ npm run build
 ### 10. SSL Sertifikası Kurun
 \`\`\`bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+sudo certbot --nginx -d ardayumlu.com -d www.ardayumlu.com
 \`\`\`
 
 ### 11. Nginx Konfigürasyonu
 \`\`\`bash
-sudo cp nginx.conf /etc/nginx/sites-available/yourdomain.com
-sudo ln -sf /etc/nginx/sites-available/yourdomain.com /etc/nginx/sites-enabled/
+sudo cp nginx.conf /etc/nginx/sites-available/ardayumlu.com
+sudo ln -sf /etc/nginx/sites-available/ardayumlu.com /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl restart nginx
@@ -215,7 +215,7 @@ Kurulum sırasında sorun yaşarsanız:
 ## 🎉 Kurulum Tamamlandı!
 
 Kurulum başarıyla tamamlandıktan sonra:
-- **Site**: https://yourdomain.com
-- **Admin Panel**: https://yourdomain.com/admin/login
+- **Site**: https://ardayumlu.com
+- **Admin Panel**: https://ardayumlu.com/admin/login
 - **Kullanıcı Adı**: arda2025
 - **Şifre**: arda2025!

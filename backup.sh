@@ -1,38 +1,35 @@
 #!/bin/bash
 
 # Arda Yumlu Portfolio - Yedekleme Scripti
-
 set -e
 
+# Renkli çıktı için
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}💾 Arda Yumlu Portfolio Yedekleniyor...${NC}"
+# Yedek dizini
+BACKUP_DIR="/var/backups/arda-yumlu-portfolio"
+PROJECT_DIR="/var/www/arda-yumlu-portfolio"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+echo -e "${YELLOW}💾 Yedekleme başlıyor...${NC}"
 
 # Yedek dizini oluştur
-BACKUP_DIR="/var/backups/arda-yumlu-portfolio"
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_PATH="$BACKUP_DIR/$DATE"
+sudo mkdir -p $BACKUP_DIR
 
-sudo mkdir -p $BACKUP_PATH
-
+# Proje dosyalarını yedekle
 echo -e "${YELLOW}📁 Proje dosyaları yedekleniyor...${NC}"
-sudo cp -r /var/www/arda-yumlu-portfolio $BACKUP_PATH/
+sudo tar -czf $BACKUP_DIR/project_$DATE.tar.gz -C /var/www arda-yumlu-portfolio
 
+# Veritabanını yedekle
 echo -e "${YELLOW}🗄️ Veritabanı yedekleniyor...${NC}"
-sudo cp /var/www/arda-yumlu-portfolio/prisma/dev.db $BACKUP_PATH/database_backup.db
-
-echo -e "${YELLOW}📋 Nginx konfigürasyonu yedekleniyor...${NC}"
-sudo cp -r /etc/nginx/sites-available $BACKUP_PATH/nginx_config
-
-echo -e "${YELLOW}🔒 SSL sertifikaları yedekleniyor...${NC}"
-sudo cp -r /etc/letsencrypt $BACKUP_PATH/ssl_certificates
+sudo cp $PROJECT_DIR/prisma/dev.db $BACKUP_DIR/database_$DATE.db
 
 # Eski yedekleri temizle (30 günden eski)
 echo -e "${YELLOW}🧹 Eski yedekler temizleniyor...${NC}"
-sudo find $BACKUP_DIR -type d -mtime +30 -exec rm -rf {} +
+sudo find $BACKUP_DIR -name "*.tar.gz" -mtime +30 -delete
+sudo find $BACKUP_DIR -name "*.db" -mtime +30 -delete
 
 echo -e "${GREEN}✅ Yedekleme tamamlandı!${NC}"
-echo -e "${GREEN}📁 Yedek konumu: $BACKUP_PATH${NC}"
+echo -e "${GREEN}📁 Yedek konumu: $BACKUP_DIR${NC}"

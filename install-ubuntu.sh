@@ -21,7 +21,8 @@ if [[ $EUID -eq 0 ]]; then
 fi
 
 # Domain adı al
-read -p "🌐 Domain adınızı girin (örn: ardayumlu.com): " DOMAIN
+read -p "🌐 Domain adınızı girin (varsayılan: ardayumlu.com): " DOMAIN
+DOMAIN=${DOMAIN:-ardayumlu.com}
 read -p "📧 E-posta adresinizi girin (SSL sertifikası için): " EMAIL
 
 echo -e "${YELLOW}📦 Sistem güncelleniyor...${NC}"
@@ -47,7 +48,7 @@ sudo chown -R $USER:$USER /var/www
 # Proje klonla (GitHub'dan)
 echo -e "${YELLOW}📥 Proje indiriliyor...${NC}"
 cd /var/www
-git clone https://github.com/your-repo/arda-yumlu-portfolio.git
+git clone https://github.com/graphigen/portfolio.git arda-yumlu-portfolio
 cd arda-yumlu-portfolio
 
 # .env dosyasını kopyala ve düzenle

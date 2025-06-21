@@ -1,0 +1,523 @@
+===============================================================================
+                    ARDA YUMLU PORTFOLIO - VDS KURULUM REHBERİ
+===============================================================================
+
+Bu rehber, sıfırdan VDS kiralayıp Ubuntu kurulumu yaparak Arda Yumlu Portfolio 
+projesini çalıştırmak için gereken tüm adımları içerir.
+
+===============================================================================
+                              1. VDS KİRALAMA
+===============================================================================
+
+1.1. VDS Sağlayıcısı Seçimi
+---------------------------
+Önerilen VDS sağlayıcıları:
+- DigitalOcean (droplet)
+- Vultr
+- Linode
+- AWS EC2
+- Google Cloud Platform
+- Hetzner
+
+1.2. VDS Özellikleri (Minimum)
+------------------------------
+- İşletim Sistemi: Ubuntu 20.04 LTS veya 22.04 LTS
+- RAM: 1GB (2GB önerilen)
+- CPU: 1 vCPU (2 vCPU önerilen)
+- Disk: 25GB SSD
+- Bant Genişliği: 1TB/ay
+
+1.3. VDS Kurulum Adımları
+-------------------------
+1. VDS sağlayıcısının web sitesine gidin
+2. Hesap oluşturun
+3. "Create Server" veya "Deploy" butonuna tıklayın
+4. Ubuntu 22.04 LTS seçin
+5. Server boyutunu seçin (en az 1GB RAM)
+6. Datacenter lokasyonu seçin (Türkiye'ye yakın: Frankfurt, Amsterdam)
+7. SSH Key ekleyin (önerilen) veya root şifresi belirleyin
+8. Server adını belirleyin: "arda-yumlu-portfolio"
+9. "Create" butonuna tıklayın
+10. 1-2 dakika bekleyin, server hazır olacak
+11. IP adresini not alın
+
+===============================================================================
+                           2. UBUNTU İLK KURULUM
+===============================================================================
+
+2.1. VDS'e Bağlanma
+-------------------
+Windows kullanıcıları için:
+- PuTTY indirin ve kurun
+- Host Name: VDS IP adresi
+- Port: 22
+- Connection Type: SSH
+- Open'a tıklayın
+
+Mac/Linux kullanıcıları için:
+Terminal'i açın ve şu komutu çalıştırın:
+ssh root@VDS_IP_ADRESI
+
+Örnek:
+ssh root@159.89.123.456
+
+2.2. İlk Güvenlik Ayarları
+--------------------------
+Root olarak giriş yaptıktan sonra:
+
+# Sistem güncellemesi
+apt update && apt upgrade -y
+
+# Yeni kullanıcı oluştur
+adduser arda
+# Şifre belirleyin ve bilgileri doldurun
+
+# Kullanıcıya sudo yetkisi ver
+usermod -aG sudo arda
+
+# SSH yapılandırması (güvenlik için)
+nano /etc/ssh/sshd_config
+
+Aşağıdaki satırları bulun ve değiştirin:
+PermitRootLogin no
+PasswordAuthentication yes (SSH key kullanmıyorsanız)
+Port 22 (değiştirmek isterseniz 2222 gibi)
+
+# SSH servisini yeniden başlat
+systemctl restart ssh
+
+# Firewall kurulumu
+ufw enable
+ufw allow ssh
+ufw allow 80
+ufw allow 443
+
+# Yeni kullanıcıya geç
+su - arda
+
+===============================================================================
+                        3. GEREKLİ EKLENTİLER KURULUMU
+===============================================================================
+
+3.1. Temel Paketler
+-------------------
+sudo apt update
+sudo apt install -y curl wget git vim nano htop unzip
+
+3.2. Node.js Kurulumu
+---------------------
+# NodeSource repository ekle
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+
+# Node.js kur
+sudo apt-get install -y nodejs
+
+# Versiyonu kontrol et
+node --version
+npm --version
+
+3.3. PM2 Kurulumu (Process Manager)
+-----------------------------------
+# PM2'yi global olarak kur
+sudo npm install -g pm2
+
+# PM2 versiyonunu kontrol et
+pm2 --version
+
+3.4. Nginx Kurulumu (Web Server)
+---------------------------------
+# Nginx kur
+sudo apt install -y nginx
+
+# Nginx'i başlat ve otomatik başlatmayı etkinleştir
+sudo systemctl start nginx
+sudo systemctl enable nginx
+
+# Durum kontrol et
+sudo systemctl status nginx
+
+3.5. Certbot Kurulumu (SSL Sertifikası)
+----------------------------------------
+# Certbot ve Nginx eklentisini kur
+sudo apt install -y certbot python3-certbot-nginx
+
+3.6. Fail2ban Kurulumu (Güvenlik)
+----------------------------------
+# Fail2ban kur (brute force saldırılarına karşı)
+sudo apt install -y fail2ban
+
+# Başlat ve etkinleştir
+sudo systemctl start fail2ban
+sudo systemctl enable fail2ban
+
+===============================================================================
+                           4. DOMAIN AYARLARI
+===============================================================================
+
+4.1. DNS Ayarları
+-----------------
+Domain sağlayıcınızın (GoDaddy, Namecheap, vs.) paneline gidin:
+
+A Record ekleyin:
+- Name: @ (veya boş)
+- Value: VDS_IP_ADRESI
+- TTL: 3600
+
+A Record ekleyin (www için):
+- Name: www
+- Value: VDS_IP_ADRESI
+- TTL: 3600
+
+DNS değişikliklerinin yayılması 1-24 saat sürebilir.
+
+4.2. Domain Test
+----------------
+# Domain'in IP'ye yönlenip yönlenmediğini test et
+nslookup ardayumlu.com
+ping ardayumlu.com
+
+===============================================================================
+                          5. PROJE KURULUMU
+===============================================================================
+
+5.1. Proje Dizini Hazırlama
+----------------------------
+# Web dizini oluştur
+sudo mkdir -p /var/www
+sudo chown -R $USER:$USER /var/www
+cd /var/www
+
+5.2. Projeyi GitHub'dan İndirme
+--------------------------------
+# Projeyi klonla
+git clone https://github.com/graphigen/portfolio.git arda-yumlu-portfolio
+cd arda-yumlu-portfolio
+
+# Dosyaları listele
+ls -la
+
+5.3. Çevre Değişkenleri Ayarlama
+---------------------------------
+# .env dosyasını oluştur
+cp .env.example .env
+
+# .env dosyasını düzenle
+nano .env
+
+Aşağıdaki değerleri güncelleyin:
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_URL="https://ardayumlu.com"
+NEXTAUTH_SECRET="güvenli-secret-key-buraya"
+NODE_ENV="production"
+ADMIN_USERNAME="arda2025"
+ADMIN_PASSWORD="arda2025!"
+
+# Güvenli secret key oluştur
+openssl rand -base64 32
+
+Bu çıktıyı NEXTAUTH_SECRET değerine yapıştırın.
+
+5.4. NPM Paketlerini Kurma
+--------------------------
+# Package.json'ı kontrol et
+cat package.json
+
+# Bağımlılıkları kur
+npm install
+
+# Kurulum hatası alırsanız:
+npm install --legacy-peer-deps
+
+5.5. Veritabanı Kurulumu
+------------------------
+# Prisma generate
+npx prisma generate
+
+# Veritabanını oluştur
+npx prisma db push
+
+# Test verilerini ekle
+npm run db:seed
+
+5.6. Projeyi Build Etme
+-----------------------
+# Production build
+npm run build
+
+# Build başarılı oldu mu kontrol et
+ls -la .next
+
+===============================================================================
+                         6. NGINX KONFIGÜRASYONU
+===============================================================================
+
+6.1. Nginx Site Konfigürasyonu
+-------------------------------
+# Nginx konfigürasyon dosyasını oluştur
+sudo nano /etc/nginx/sites-available/ardayumlu.com
+
+Aşağıdaki içeriği yapıştırın:
+
+server {
+    listen 80;
+    server_name ardayumlu.com www.ardayumlu.com;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# Site'ı etkinleştir
+sudo ln -s /etc/nginx/sites-available/ardayumlu.com /etc/nginx/sites-enabled/
+
+# Varsayılan site'ı kaldır
+sudo rm /etc/nginx/sites-enabled/default
+
+# Nginx konfigürasyonunu test et
+sudo nginx -t
+
+# Nginx'i yeniden başlat
+sudo systemctl restart nginx
+
+===============================================================================
+                           7. SSL SERTİFİKASI
+===============================================================================
+
+7.1. Let's Encrypt SSL Kurulumu
+--------------------------------
+# SSL sertifikası al
+sudo certbot --nginx -d ardayumlu.com -d www.ardayumlu.com
+
+E-posta adresinizi girin ve şartları kabul edin.
+
+# Otomatik yenileme test et
+sudo certbot renew --dry-run
+
+7.2. SSL Yenileme Otomasyonu
+-----------------------------
+# Crontab düzenle
+sudo crontab -e
+
+Aşağıdaki satırı ekleyin:
+0 12 * * * /usr/bin/certbot renew --quiet
+
+===============================================================================
+                          8. PM2 İLE UYGULAMA BAŞLATMA
+===============================================================================
+
+8.1. PM2 Ecosystem Dosyası
+---------------------------
+# ecosystem.config.js dosyasını kontrol et
+cat ecosystem.config.js
+
+8.2. Uygulamayı Başlatma
+------------------------
+# PM2 ile uygulamayı başlat
+pm2 start ecosystem.config.js --env production
+
+# Durum kontrol et
+pm2 status
+
+# Logları görüntüle
+pm2 logs
+
+8.3. PM2 Otomatik Başlatma
+--------------------------
+# PM2 konfigürasyonunu kaydet
+pm2 save
+
+# Sistem başlangıcında otomatik başlat
+pm2 startup
+
+# Çıkan komutu çalıştırın (sudo ile başlayan)
+
+===============================================================================
+                            9. FİNAL KONTROLLER
+===============================================================================
+
+9.1. Servis Durumları
+---------------------
+# Nginx durumu
+sudo systemctl status nginx
+
+# PM2 durumu
+pm2 status
+
+# Firewall durumu
+sudo ufw status
+
+9.2. Site Testi
+---------------
+# Tarayıcıda test edin:
+https://ardayumlu.com
+https://ardayumlu.com/admin/login
+
+# Komut satırından test:
+curl -I https://ardayumlu.com
+
+9.3. Admin Panel Testi
+----------------------
+URL: https://ardayumlu.com/admin/login
+Kullanıcı Adı: arda2025
+Şifre: arda2025!
+
+===============================================================================
+                           10. YARAR KOMUTLAR
+===============================================================================
+
+10.1. PM2 Komutları
+-------------------
+pm2 status                    # Durum görüntüle
+pm2 logs                      # Logları görüntüle
+pm2 logs arda-yumlu-portfolio # Sadece bu app'in logları
+pm2 restart arda-yumlu-portfolio # Yeniden başlat
+pm2 stop arda-yumlu-portfolio    # Durdur
+pm2 delete arda-yumlu-portfolio  # Sil
+pm2 monit                     # Monitoring arayüzü
+
+10.2. Nginx Komutları
+---------------------
+sudo systemctl status nginx   # Durum
+sudo systemctl restart nginx  # Yeniden başlat
+sudo systemctl reload nginx   # Konfigürasyon yenile
+sudo nginx -t                 # Konfigürasyon test
+sudo tail -f /var/log/nginx/access.log # Access log
+sudo tail -f /var/log/nginx/error.log  # Error log
+
+10.3. Sistem Komutları
+----------------------
+htop                          # Sistem kaynak kullanımı
+df -h                         # Disk kullanımı
+free -h                       # RAM kullanımı
+sudo ufw status               # Firewall durumu
+sudo fail2ban-client status   # Fail2ban durumu
+
+===============================================================================
+                           11. SORUN GİDERME
+===============================================================================
+
+11.1. Site Açılmıyor
+---------------------
+1. PM2 durumunu kontrol edin: pm2 status
+2. Nginx durumunu kontrol edin: sudo systemctl status nginx
+3. Firewall'u kontrol edin: sudo ufw status
+4. DNS'i kontrol edin: nslookup ardayumlu.com
+5. Logları kontrol edin: pm2 logs
+
+11.2. SSL Sorunu
+----------------
+sudo certbot certificates
+sudo certbot renew
+sudo systemctl restart nginx
+
+11.3. Veritabanı Sorunu
+-----------------------
+cd /var/www/arda-yumlu-portfolio
+npx prisma db push
+npm run db:seed
+
+11.4. Port Sorunu
+-----------------
+sudo netstat -tlnp | grep :3000
+sudo netstat -tlnp | grep :80
+sudo netstat -tlnp | grep :443
+
+===============================================================================
+                            12. GÜVENLİK ÖNERİLERİ
+===============================================================================
+
+12.1. SSH Güvenliği
+-------------------
+# SSH port değiştir
+sudo nano /etc/ssh/sshd_config
+Port 2222
+
+# SSH key kullan (şifre yerine)
+ssh-keygen -t rsa -b 4096
+
+12.2. Firewall Kuralları
+------------------------
+sudo ufw allow 2222/tcp  # SSH port değiştirdiyseniz
+sudo ufw deny 22/tcp     # Varsayılan SSH portunu kapat
+
+12.3. Fail2ban Ayarları
+-----------------------
+sudo nano /etc/fail2ban/jail.local
+
+[sshd]
+enabled = true
+port = 2222
+maxretry = 3
+bantime = 3600
+
+===============================================================================
+                              13. YEDEKLEME
+===============================================================================
+
+13.1. Manuel Yedekleme
+----------------------
+# Veritabanı yedeği
+cp /var/www/arda-yumlu-portfolio/prisma/dev.db ~/backup-$(date +%Y%m%d).db
+
+# Proje yedeği
+tar -czf ~/arda-portfolio-backup-$(date +%Y%m%d).tar.gz /var/www/arda-yumlu-portfolio
+
+13.2. Otomatik Yedekleme
+------------------------
+# Backup scripti çalıştır
+cd /var/www/arda-yumlu-portfolio
+./backup.sh
+
+# Crontab ile otomatik yedekleme
+crontab -e
+0 2 * * * /var/www/arda-yumlu-portfolio/backup.sh
+
+===============================================================================
+                               14. GÜNCELLEME
+===============================================================================
+
+14.1. Proje Güncelleme
+----------------------
+cd /var/www/arda-yumlu-portfolio
+git pull origin main
+npm install
+npm run build
+pm2 restart arda-yumlu-portfolio
+
+14.2. Sistem Güncelleme
+-----------------------
+sudo apt update && sudo apt upgrade -y
+sudo reboot
+
+===============================================================================
+                                 15. SONUÇ
+===============================================================================
+
+Kurulum tamamlandıktan sonra:
+
+✅ Site: https://ardayumlu.com
+✅ Admin Panel: https://ardayumlu.com/admin/login
+✅ Kullanıcı Adı: arda2025
+✅ Şifre: arda2025!
+
+Önemli Notlar:
+- Admin şifresini mutlaka değiştirin
+- Düzenli yedekleme yapın
+- Sistem güncellemelerini takip edin
+- SSL sertifikasının otomatik yenilenmesini kontrol edin
+
+Destek için:
+- GitHub: https://github.com/graphigen/portfolio
+- E-posta: arda@ardayumlu.com
+
+===============================================================================
+                            KURULUM TAMAMLANDI!
+===============================================================================
